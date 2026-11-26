@@ -1,0 +1,131 @@
+
+extends ../components/layout/layout.pug
+
+block content
+  nav#nav
+
+  .wrap
+    #p-home
+      header
+        div
+          h1 My
+            span  Space
+
+          .mut
+            span#greet(title="Изменить имя" style="cursor:pointer")
+            |  · 
+            span#today
+
+          .mut#quote
+
+        .row
+          button.btn#exp ⬇ Экспорт
+          button.btn#imp ⬆ Импорт
+          input#file(type="file" accept=".json" hidden)
+          button.btn#theme(title="Тема") 🌙
+
+      section.card.full(style="margin-bottom:16px")
+        h2 Прогресс дня
+          span.mut#catMsg
+
+        .track
+          img.path(src="assets/path.png" alt="" onerror="this.style.display='none'")
+
+          .cat#cat
+            img(src="assets/images/cat.png" alt="кот" onerror="this.style.display='none';this.nextElementSibling.style.display='block'")
+            .ph
+
+          .yarn
+            img(src="assets/images/house.png" alt="домик" onerror="this.style.display='none';this.nextElementSibling.style.display='block'")
+            .ph
+
+        .bar
+          i#bar
+
+        .stats#gstats
+
+        .mut(style="margin-top:6px")
+          | +1 балл за задачу (один раз), +5 за закрытый день (один раз на дату).
+
+      section.card(style="margin-bottom:16px")
+        h2 Старт дня
+          span.mut#sodDate
+
+        .sod
+          div
+            .mut Настроение
+            .pick#mood
+
+          div
+            .mut Энергия
+            .pick#energy
+
+          label.mut
+            | Моё главное дело сегодня
+            input#main(placeholder="Что сегодня приблизит тебя к мечте?")
+
+      .grid
+        section.card
+          .row.sp(style="margin-bottom:10px")
+            button.ib#prev ◀
+            span.mt#mTitle
+            button.ib#next ▶
+
+          .cal#cal
+
+          .row.sp(style="margin-top:10px")
+            button.btn#goToday Сегодня
+            span.mut
+              i(style="color:var(--ac)") ●
+              |  задачи 
+              i(style="color:#e58fb0") ●
+              |  заметки
+
+        section.card
+          .row.sp
+            h2#dTitle(style="margin:0")
+            .row
+              button.btn#catMgr 🏷 Категории
+              button.btn.pri#addT + Задача
+
+          .mut#dMain(style="margin-top:4px")
+          .chips#filter
+          ul#tasks
+
+        section.card#timer
+
+        section.card
+          h2 Время в фокусе за неделю
+          #week
+
+        section.card
+          h2 Заметки дня
+          textarea#nText(placeholder="Новая заметка…")
+          button.btn.pri#nAdd(style="margin-top:6px") Добавить
+          #notes
+
+        section.card
+          .row.sp
+            h2(style="margin:0") Привычки
+            button.btn#hAdd + Привычка
+
+          #habits
+
+        section.card.full
+          h2 Итог дня
+
+          .stats#rStats(style="margin-bottom:12px")
+
+          .grid
+            label.mut
+              | Что сегодня получилось?
+              textarea#rGood
+
+            label.mut
+              | Что нужно перенести или сделать завтра?
+              textarea#rNext
+
+    main#pg(hidden)
+
+  dialog#dlg
+  #toast
