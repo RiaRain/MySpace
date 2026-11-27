@@ -1307,13 +1307,13 @@ const H = {};
 let cur = 'home';
 
 const PAGES = [
-  ['home', '🏠', 'Главная'],
-  ['fin', '💰', 'Финансы'],
-  ['eng', '🔤', 'Английский'],
-  ['books', '📚', 'Книги'],
-  ['wish', '🎁', 'Вишлист'],
-  ['ideas', '💡', 'Идеи'],
-  ['ach', '🏆', 'Достижения']
+  ['home', 'home.png', 'Главная'],
+  ['fin', 'pay.png', 'Финансы'],
+  ['eng', 'english.png', 'Английский'],
+  ['books', 'books.png', 'Книги'],
+  ['wish', 'gift.png', 'Вишлист'],
+  ['ideas', 'idea.png', 'Идеи'],
+  ['ach', 'win.png', 'Достижения']
 ];
 
 const CHEER = [
@@ -1441,10 +1441,10 @@ const shrink = (f, m = 380) => new Promise(r => {
 /* ===== Навигация между страницами ===== */
 
 $('#nav').innerHTML =
-  '<b>🪐 My Space</b>' +
+  '<b><img class="nav-icon" src="assets/icons/space.png" alt=""> My Space</b>' +
   PAGES.map(([k, i, t]) => `
     <button data-p="${k}">
-      <span>${i}</span>
+      <img class="nav-icon" src="assets/icons/${i}" alt="">
       ${t}
     </button>
   `).join('') +

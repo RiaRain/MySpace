@@ -12,6 +12,7 @@ module.exports = {
     filename: 'js/bundle.js',
     path: path.resolve(__dirname, 'build'),
     clean: true,
+    publicPath: '/MySpace/',
   },
 
   module: {
@@ -53,6 +54,10 @@ module.exports = {
         {
           from: './source/assets/images',
           to: 'assets/images',
+        },
+        {
+          from: './source/assets/icons',
+          to: 'assets/icons',
         },
       ],
     }),
