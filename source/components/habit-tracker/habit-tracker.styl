@@ -1,0 +1,164 @@
+
+.ht-overlay
+  position fixed
+  inset 0
+  z-index 1000
+  width calc(100% - 32px)
+  max-width 1200px
+  max-height 85vh
+  margin auto
+  padding 16px
+  border 1px solid var(--ln)
+  border-radius 22px
+  background var(--bg1)
+  color var(--tx)
+  box-shadow var(--sh)
+  overflow hidden
+
+  &::backdrop
+    background rgba(30, 20, 50, .35)
+    backdrop-filter blur(6px)
+    -webkit-backdrop-filter blur(6px)
+
+.ht-modal
+  width 100%
+  max-height calc(85vh - 32px)
+  display flex
+  flex-direction column
+  padding 4px
+  overflow hidden
+
+.ht-header
+  display flex
+  align-items center
+  justify-content space-between
+  gap 12px
+
+  h2
+    margin 0
+
+.ht-close
+  flex-shrink 0
+  width 36px
+  height auto
+  border 0
+  border-radius 10px
+  background var(--ac2)
+  color inherit
+  font-size 28px
+  cursor pointer
+
+.ht-navigation
+  display flex
+  align-items center
+  justify-content center
+  gap 24px
+  margin 20px 0
+
+  h3
+    min-width 170px
+    text-align center
+    text-transform capitalize
+    margin 0
+
+  button
+    border 0
+    background var(--ac2)
+    color inherit
+    border-radius 8px
+    padding 8px 14px
+    cursor pointer
+
+.ht-content
+  min-height 0
+  overflow auto
+
+.ht-table-wrap
+  width 100%
+  overflow auto
+  max-height 60vh
+
+.ht-table
+  border-collapse collapse
+  width max-content
+  min-width 100%
+  font-size 13px
+
+  tbody tr:nth-child(even) td,
+  tbody tr:nth-child(even) .ht-habit-name
+    background var(--ac2)
+
+  tbody tr:nth-child(odd) td,
+  tbody tr:nth-child(odd) .ht-habit-name
+    background var(--bg1)
+
+  thead th
+    position sticky
+    top 0
+    background var(--ac2)
+    border-bottom 1px solid var(--ln)
+    z-index 2
+
+  th, td
+    min-width 30px
+    height 34px
+    padding 5px
+    text-align center
+    border-bottom 1px solid var(--ln)
+
+  .ht-habit-name
+    position sticky
+    left 0
+    min-width 150px
+    max-width 200px
+    text-align left
+    z-index 3
+
+  td.ht-done
+    color var(--ac)
+    font-weight bold
+
+.empty
+  padding 30px 15px
+  text-align center
+  color var(--mut)
+  background var(--ac2)
+  border-radius 12px
+
+[data-theme='dark'] .ht-table
+  tbody tr:nth-child(even) td,
+  tbody tr:nth-child(even) .ht-habit-name
+    background var(--bg2)
+
+  tbody tr:nth-child(odd) td,
+  tbody tr:nth-child(odd) .ht-habit-name
+    background var(--bg1)
+
+  thead th
+    background var(--bg2)
+    border-bottom-color var(--ln)
+
+@media (max-width: 600px)
+  .ht-overlay
+    width calc(100% - 16px)
+    max-height 95vh
+    padding 10px
+    border-radius 16px
+
+  .ht-modal
+    max-height calc(95vh - 20px)
+    padding 2px
+
+  .ht-header h2
+    font-size 18px
+
+  .ht-navigation
+    gap 12px
+    margin 16px 0
+
+    h3
+      min-width 140px
+      font-size 15px
+
+  .ht-table .ht-habit-name
+    min-width 110px

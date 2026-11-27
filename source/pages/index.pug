@@ -22,7 +22,6 @@ block content
           button.btn#exp ⬇ Экспорт
           button.btn#imp ⬆ Импорт
           input#file(type="file" accept=".json" hidden)
-          button.btn#theme(title="Тема") 🌙
 
       section.card.full(style="margin-bottom:16px")
         h2 Прогресс дня
@@ -75,6 +74,9 @@ block content
 
           .row.sp(style="margin-top:10px")
             button.btn#goToday Сегодня
+            button.btn#dayOverview(title="Обзор выбранного дня")
+              span 👁
+              |  Обзор дня
             span.mut
               i(style="color:var(--ac)") ●
               |  задачи
@@ -107,7 +109,9 @@ block content
         section.card
           .row.sp
             h2(style="margin:0") Привычки
-            button.btn#hAdd + Привычка
+            .row
+              button.btn#hStats Статистика
+              button.btn#hAdd + Привычка
 
           #habits
 

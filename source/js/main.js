@@ -1,5 +1,8 @@
 import '../styles/main.styl';
 
+import { openHabitTracker } from '../components/habit-tracker/habit-tracker.js';
+import { initDayOverview } from '../components/day-overview/day-overview';
+
 /* ===== Данные и настройки ===== */
 
 const KEY = 'myspace.v1';
@@ -97,7 +100,9 @@ function norm(d) {
     books: d.books || [],
     wish: d.wish || [],
     ideas: d.ideas || [],
-    ach: d.ach || []
+    ach: d.ach || [],
+    ideaCategories: d.ideaCategories || [],
+    mood: d.mood || {},
   };
 }
 
@@ -473,7 +478,7 @@ function head() {
   $('#greet').textContent += (S.name ? ', ' + S.name : '') + ' ✨';
 
   $('#today').textContent = longDate(today());
-  $('#theme').textContent = S.theme === 'dark' ? '☀️' : '🌙';
+  // $('#theme').textContent = S.theme === 'dark' ? '☀️' : '🌙';
 
   document.documentElement.dataset.theme = S.theme;
 }
@@ -502,6 +507,22 @@ function start() {
 
 function setStart(k, v) {
   (S.start[sel] = S.start[sel] || {})[k] = v;
+
+  // синхронизируем с рейтингом, который читает календарь
+  if (k === 'mood' || k === 'energy') {
+    const s = S.start[sel];
+
+    S.mood ||= {};
+
+    if (s.mood || s.energy) {
+      S.mood[sel] = {
+        mood: s.mood || 0,
+        energy: s.energy || 0
+      };
+    } else {
+      delete S.mood[sel];
+    }
+  }
 }
 
 function cal() {
@@ -532,10 +553,40 @@ function cal() {
 
     const ht = S.tasks.some(x => x.date === k);
     const hn = S.notes.some(x => x.date === k);
+    const st = S.start[k];
+
+    const rating = S.mood?.[k] ||
+      (st && (st.mood || st.energy)
+        ? { mood: st.mood || 0, energy: st.energy || 0 }
+        : null);
+
+    const track = k === sel
+      ? 'rgba(255,255,255,.35)'
+      : 'rgba(128,128,160,.25)';
+
+    const lineCss =
+      `height:5px;border-radius:10px;overflow:hidden;background:${track}`;
+
+    const moodColor = `hsl(${(Math.max(rating?.mood || 1, 1) - 1) * 30}, 75%, 55%)`;
+
+    const bars = rating ? `
+      <div class="day-rating" style="display:flex;flex-direction:column;gap:3px;width:75%;margin:4px auto 0"
+           title="Энергия: ${rating.energy}/5 · Настроение: ${rating.mood}/5">
+        <div class="day-rating__line" style="${lineCss}">
+          <span class="day-rating__energy"
+                style="display:block;height:100%;border-radius:10px;background:#f5b942;width:${rating.energy * 20}%"></span>
+        </div>
+        <div class="day-rating__line" style="${lineCss}">
+          <span class="day-rating__mood"
+                style="display:block;height:100%;border-radius:10px;background:${moodColor};width:${rating.mood * 20}%"></span>
+        </div>
+      </div>
+    ` : '';
 
     h += `
       <button class="day ${k === t ? 'today' : ''} ${k === sel ? 'sel' : ''}" data-d="${k}">
         ${d}
+        ${bars}
         <span class="dots">
           ${ht ? '<i></i>' : ''}
           ${hn ? '<i class="n"></i>' : ''}
@@ -552,9 +603,64 @@ function day() {
 
   const m = S.start[sel]?.main;
 
-  $('#dMain').innerHTML = m
-    ? '🎯 Главное: <b>' + esc(m) + '</b>'
-    : '';
+  const rating = S.mood?.[sel];
+
+  $('#dMain').innerHTML = `
+    ${m ? '🎯 Главное: <b>' + esc(m) + '</b>' : ''}
+
+    <div class="day-mood">
+      <button class="btn" id="dayMood">
+        ${rating
+          ? `⚡ Энергия: ${rating.energy}/5 · 💜 Настроение: ${rating.mood}/5`
+          : '⚡ Настроение и энергия'}
+      </button>
+    </div>
+  `;
+
+  $('#dayMood').onclick = () => {
+    const rating = S.mood?.[sel] || { energy: 3, mood: 3 };
+
+    form('Энергия и настроение', [
+      {
+        k: 'energy',
+        label: '⚡ Уровень энергии',
+        type: 'select',
+        val: String(rating.energy),
+        opts: [
+          ['1', '1 — Очень мало'],
+          ['2', '2 — Мало'],
+          ['3', '3 — Нормально'],
+          ['4', '4 — Много'],
+          ['5', '5 — Максимум']
+        ]
+      },
+      {
+        k: 'mood',
+        label: '💜 Настроение',
+        type: 'select',
+        val: String(rating.mood),
+        opts: [
+          ['1', '1 — Очень плохое'],
+          ['2', '2 — Плохое'],
+          ['3', '3 — Нейтральное'],
+          ['4', '4 — Хорошее'],
+          ['5', '5 — Отличное']
+        ]
+      }
+    ], v => {
+      S.mood ||= {};
+      S.mood[sel] = {
+        energy: Number(v.energy),
+        mood: Number(v.mood)
+      };
+
+      (S.start[sel] = S.start[sel] || {}).mood = Number(v.mood);
+      S.start[sel].energy = Number(v.energy);
+
+      save();
+      render();
+    });
+  };
 
   const all = dayTasks(sel);
   const done = all.filter(t => t.done).length;
@@ -1030,7 +1136,9 @@ document.addEventListener('click', e => {
       +D.m === S.start[sel]?.mood ? 0 : +D.m
     );
 
+    save();
     start();
+    cal();
   }
 
   if (D.en) {
@@ -1039,7 +1147,9 @@ document.addEventListener('click', e => {
       +D.en === S.start[sel]?.energy ? 0 : +D.en
     );
 
+    save();
     start();
+    cal();
   }
 
   if (D.f) {
@@ -1179,6 +1289,10 @@ $('#catMgr').onclick = catsMgr;
 
 $('#hAdd').onclick = () => habitForm();
 
+$('#hStats').onclick = () => {
+  openHabitTracker(S.habits);
+};
+
 $('#nAdd').onclick = () => {
   const v = $('#nText').value.trim();
 
@@ -1214,12 +1328,12 @@ $('#rNext').oninput = e => {
   save();
 };
 
-$('#theme').onclick = () => {
-  S.theme = S.theme === 'dark' ? 'light' : 'dark';
+// $('#theme').onclick = () => {
+//   S.theme = S.theme === 'dark' ? 'light' : 'dark';
 
-  save();
-  head();
-};
+//   save();
+//   head();
+// };
 
 document.addEventListener('input', e => {
   if (e.target.id === 'tmin') {
@@ -1303,6 +1417,63 @@ render();
 
 const R = {};
 const H = {};
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-c]');
+
+  if (b && b.tagName !== 'SELECT' && H[b.dataset.c]) {
+    H[b.dataset.c](b.dataset.id, b);
+  }
+});
+
+H['day.mood'] = () => {
+  const rating = S.mood?.[sel] || {
+    energy: 3,
+    mood: 3
+  };
+
+  form('Энергия и настроение', [
+    {
+      k: 'energy',
+      label: '⚡ Уровень энергии',
+      type: 'select',
+      val: String(rating.energy),
+      opts: [
+        ['1', '1 — Очень мало'],
+        ['2', '2 — Мало'],
+        ['3', '3 — Нормально'],
+        ['4', '4 — Много'],
+        ['5', '5 — Максимум']
+      ]
+    },
+    {
+      k: 'mood',
+      label: '💜 Настроение',
+      type: 'select',
+      val: String(rating.mood),
+      opts: [
+        ['1', '1 — Очень плохое'],
+        ['2', '2 — Плохое'],
+        ['3', '3 — Нейтральное'],
+        ['4', '4 — Хорошее'],
+        ['5', '5 — Отличное']
+      ]
+    }
+  ], v => {
+    S.mood ||= {};
+
+    S.mood[sel] = {
+      energy: Number(v.energy),
+      mood: Number(v.mood)
+    };
+
+    (S.start[sel] = S.start[sel] || {}).mood = Number(v.mood);
+    S.start[sel].energy = Number(v.energy);
+
+    save();
+    render();
+  });
+};
 
 let cur = 'home';
 
@@ -1441,7 +1612,7 @@ const shrink = (f, m = 380) => new Promise(r => {
 /* ===== Навигация между страницами ===== */
 
 $('#nav').innerHTML =
-  '<b><img class="nav-icon" src="assets/icons/space.png" alt=""> My Space</b>' +
+  '<b>My Space</b>' +
   PAGES.map(([k, i, t]) => `
     <button data-p="${k}">
       <img class="nav-icon" src="assets/icons/${i}" alt="">
@@ -1456,7 +1627,11 @@ $('#nav').onclick = e => {
   if (!b) return;
 
   if (b.id === 'theme2') {
-    $('#theme').click();
+    S.theme = S.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = S.theme;
+    save();
+
+    b.textContent = S.theme === 'dark' ? '☀️ Тема' : '🌙 Тема';
   } else {
     go(b.dataset.p);
   }
@@ -1481,14 +1656,6 @@ function go(p) {
 
   scrollTo(0, 0);
 }
-
-$('#pg').onclick = e => {
-  const b = e.target.closest('[data-c]');
-
-  if (b && b.tagName !== 'SELECT' && H[b.dataset.c]) {
-    H[b.dataset.c](b.dataset.id, b);
-  }
-};
 
 $('#pg').onchange = e => {
   const b = e.target.closest('select[data-c]');
@@ -1603,7 +1770,7 @@ R.fin = () => {
   const cats = [...new Set([...FIN.inc, ...FIN.exp])];
 
   $('#pg').innerHTML = hd(
-    '💰 Финансы',
+    'Финансы',
     'Деньги любят порядок и спокойный взгляд. Копим на мечты ✨'
   ) +
 
@@ -1948,7 +2115,7 @@ R.eng = () => {
         : item(et);
 
   $('#pg').innerHTML = hd(
-    '🔤 Английский',
+    'Английский',
     'Каждое новое слово — окно в большой мир 🌍'
   ) +
 
@@ -2187,9 +2354,9 @@ function logForm(x) {
 /* ===== Книги ===== */
 
 const SH = [
-  ['want', '🌙 Хочу прочитать'],
-  ['now', '📖 Сейчас читаю'],
-  ['done', '🏆 Прочитано']
+  ['want', 'Хочу прочитать'],
+  ['now', 'Сейчас читаю'],
+  ['done', 'Прочитано']
 ];
 
 const bkCover = b => {
@@ -2229,7 +2396,7 @@ const bkCover = b => {
 
 R.books = () => {
   $('#pg').innerHTML = hd(
-    '📚 Книги',
+    'Книги',
     'Каждая книга — маленькая вселенная. Полки ждут новых историй 🌌'
   ) +
 
@@ -2255,7 +2422,7 @@ R.books = () => {
             <div class="books">
               ${
                 l.map(bkCover).join('') ||
-                '<span class="mut" style="padding:50px 8px 0">Полка пока пуста 📖</span>'
+                '<span class="mut" style="padding:50px 8px 0">Полка пока пуста</span>'
               }
             </div>
 
@@ -2466,7 +2633,7 @@ R.wish = () => {
   const bal = total();
 
   $('#pg').innerHTML = hd(
-    '🎁 Вишлист',
+    'Вишлист',
     'Мечты любят, когда их записывают. Копи ⭐ и дари себе красивое'
   ) +
 
@@ -2658,40 +2825,33 @@ function wishForm(x) {
 
 /* ===== Идеи ===== */
 
-const IC = {
-  video: [
-    '🎬',
-    'Идеи для видеоблога',
-    '#e58fb0'
-  ],
-
-  web: [
-    '💻',
-    'Идеи для веб-проектов',
-    '#6fa8dc'
-  ],
-
-  knit: [
-    '🧶',
-    'Идеи для вязания',
-    '#7fb593'
-  ],
-
-  music: [
-    '🎹',
-    'Идеи для музыки',
-    '#b57fe0'
-  ]
-};
-
 let iq = '';
+
+const ideaColors = [
+  '#e58fb0',
+  '#6fa8dc',
+  '#7fb593',
+  '#b57fe0',
+  '#e5a65c',
+  '#75bfc0',
+  '#d58ca5',
+  '#9990df'
+];
 
 const ideasList = () => {
   const q = iq.trim().toLowerCase();
 
-  return Object.entries(IC).map(([k, [ic, nm, col]]) => {
+  if (!S.ideaCategories.length) {
+    return `
+      <div class="empty">
+        Создай свою первую категорию ✨
+      </div>
+    `;
+  }
+
+  return S.ideaCategories.map(cat => {
     const l = S.ideas.filter(x =>
-      x.cat === k &&
+      x.cat === cat.id &&
       (
         !q ||
         (x.title + ' ' + x.text + ' ' + x.tags.join(' '))
@@ -2702,17 +2862,28 @@ const ideasList = () => {
 
     return `
       <div class="card">
-        <h2 style="color:${col}">
-          ${ic} ${nm}
-          <span class="mut">${l.length}</span>
-        </h2>
+        <div class="row sp">
+          <h2 style="color:${cat.color}">
+            ${esc(cat.icon)} ${esc(cat.name)}
+            <span class="mut">${l.length}</span>
+          </h2>
+
+          <button
+            class="ib"
+            data-c="idea.cat.rm"
+            data-id="${cat.id}"
+            title="Удалить категорию"
+          >
+            🗑️
+          </button>
+        </div>
 
         ${
           l.length
             ? l.map(x => `
                 <div
                   class="idea ${x.done ? 'done' : ''}"
-                  style="border-color:${col}"
+                  style="border-color:${cat.color}"
                 >
                   <div class="row sp">
                     <b class="tt">${esc(x.title)}</b>
@@ -2761,7 +2932,7 @@ const ideasList = () => {
 
 R.ideas = () => {
   $('#pg').innerHTML = hd(
-    '💡 Идеи и заметки',
+    'Идеи и заметки',
     'Пусть ни одна хорошая мысль не потеряется 🌠'
   ) +
 
@@ -2777,6 +2948,10 @@ R.ideas = () => {
       <button class="btn pri" data-c="idea.add">
         + Идея
       </button>
+
+      <button class="btn" data-c="idea.cat.add">
+        + Категория
+      </button>
     </div>
 
     <div class="ig" id="ilist">
@@ -2786,6 +2961,135 @@ R.ideas = () => {
 };
 
 /* ===== Обработчики идей ===== */
+
+H['idea.cat.rm'] = id => {
+  const cat = S.ideaCategories.find(x => x.id === id);
+
+  if (!cat) return;
+
+  if (!confirm(
+    `Удалить категорию «${cat.name}»? Идеи из неё будут перенесены в другую категорию.`
+  )) return;
+
+  const next = S.ideaCategories.find(x => x.id !== id);
+
+  if (next) {
+    S.ideas.forEach(x => {
+      if (x.cat === id) x.cat = next.id;
+    });
+  } else {
+    S.ideas = S.ideas.filter(x => x.cat !== id);
+  }
+
+  S.ideaCategories = S.ideaCategories.filter(x => x.id !== id);
+
+  save();
+  R.ideas();
+
+  toast('Категория удалена');
+};
+
+H['idea.cat.add'] = () => {
+  form(
+    'Новая категория',
+    [
+      {
+        k: 'name',
+        label: 'Название категории',
+        val: ''
+      },
+      {
+        k: 'icon',
+        label: 'Выбери иконку',
+        type: 'select',
+        val: '💡',
+        opts: [
+          ['💡', '💡 Идея'],
+          ['🎨', '🎨 Искусство'],
+          ['🎬', '🎬 Видео'],
+          ['📷', '📷 Фото'],
+          ['🎵', '🎵 Музыка'],
+          ['🎹', '🎹 Пианино'],
+          ['🎸', '🎸 Гитара'],
+          ['🎤', '🎤 Пение'],
+          ['🎧', '🎧 Аудио'],
+          ['🎮', '🎮 Игры'],
+          ['💻', '💻 Компьютер'],
+          ['📱', '📱 Телефон'],
+          ['🌐', '🌐 Интернет'],
+          ['🖥️', '🖥️ Разработка'],
+          ['📚', '📚 Книги'],
+          ['✍️', '✍️ Письмо'],
+          ['📝', '📝 Заметки'],
+          ['📖', '📖 Чтение'],
+          ['🎓', '🎓 Учёба'],
+          ['🔬', '🔬 Наука'],
+          ['🧪', '🧪 Эксперименты'],
+          ['🧵', '🧵 Рукоделие'],
+          ['🧶', '🧶 Вязание'],
+          ['🪡', '🪡 Шитьё'],
+          ['🧩', '🧩 Пазлы'],
+          ['🏠', '🏠 Дом'],
+          ['🪴', '🪴 Растения'],
+          ['🌸', '🌸 Цветы'],
+          ['🌿', '🌿 Природа'],
+          ['🐈', '🐈 Кошки'],
+          ['🐕', '🐕 Собаки'],
+          ['🍰', '🍰 Выпечка'],
+          ['🍳', '🍳 Кулинария'],
+          ['☕', '☕ Кофе'],
+          ['🍓', '🍓 Еда'],
+          ['✈️', '✈️ Путешествия'],
+          ['🚗', '🚗 Авто'],
+          ['🏕️', '🏕️ Отдых'],
+          ['🏃', '🏃 Спорт'],
+          ['🧘', '🧘 Йога'],
+          ['💪', '💪 Фитнес'],
+          ['🚴', '🚴 Велосипед'],
+          ['💰', '💰 Финансы'],
+          ['💼', '💼 Работа'],
+          ['📈', '📈 Развитие'],
+          ['🎯', '🎯 Цели'],
+          ['⭐', '⭐ Избранное'],
+          ['❤️', '❤️ Личное'],
+          ['💜', '💜 Вдохновение'],
+          ['🌈', '🌈 Творчество'],
+          ['✨', '✨ Магия'],
+          ['🔥', '🔥 Важно'],
+          ['🎁', '🎁 Подарки'],
+          ['🛍️', '🛍️ Покупки'],
+          ['🧸', '🧸 Милое'],
+          ['🌙', '🌙 Мечты'],
+          ['☀️', '☀️ Настроение'],
+          ['🦋', '🦋 Красота'],
+          ['🐾', '🐾 Животные'],
+          ['🎉', '🎉 События'],
+          ['📅', '📅 Планы'],
+          ['🗂️', '🗂️ Проекты'],
+          ['🔧', '🔧 Мастерская'],
+          ['🪄', '🪄 Другое']
+        ]
+      }
+    ],
+    v => {
+      if (!v.name.trim() || !v.icon.trim()) return false;
+
+      const color = ideaColors[
+        S.ideaCategories.length % ideaColors.length
+      ];
+
+      S.ideaCategories.push({
+        id: uid(),
+        name: v.name.trim(),
+        icon: v.icon.trim(),
+        color
+      });
+
+      save();
+      R.ideas();
+    }
+  );
+};
 
 H['idea.add'] = () => ideaForm();
 
@@ -2820,10 +3124,10 @@ function ideaForm(x) {
         k: 'cat',
         label: 'Категория',
         type: 'select',
-        val: x?.cat || 'video',
-        opts: Object.entries(IC).map(([k, v]) => [
-          k,
-          v[0] + ' ' + v[1]
+        val: x?.cat || S.ideaCategories[0]?.id || '',
+        opts: S.ideaCategories.map(cat => [
+          cat.id,
+          cat.icon + ' ' + cat.name
         ])
       },
       {
@@ -2921,7 +3225,7 @@ R.ach = () => {
   const day = S.ach.filter(a => a.date === as);
 
   $('#pg').innerHTML = hd(
-    '🏆 Дневник достижений',
+    'Дневник достижений',
     'Здесь живут твои маленькие и большие победы. Ты молодец 💫'
   ) +
 
@@ -3083,6 +3387,21 @@ function achForm(x) {
     }
   );
 }
+
+initDayOverview({
+  getDate: () => sel,
+
+  getTasks: date => dayTasks(date),
+
+  getFocus: date => fmtDur(focusSec(date)),
+
+  getHabits: () => S.habits,
+
+  getNotes: date =>
+    S.notes.filter(n => n.date === date),
+
+  getPoints: date => dayPts(date)
+});
 
 /* ===== Запуск приложения ===== */
 

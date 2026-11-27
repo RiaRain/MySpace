@@ -1,3 +1,10 @@
+# публикация
+git add .
+git commit -m "Обновление проекта"
+git push origin main
+npm run build
+npx gh-pages -d build
+
 # Frontend-сборка: установка и настройка с нуля
 
 Универсальная сборка для проектов на **Pug + Stylus + Vanilla JavaScript + Webpack**.
